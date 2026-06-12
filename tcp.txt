@@ -1,0 +1,45 @@
+what is tcp?
+
+
+Thumb Rule of network programing:
+1. who starts listening? - server
+net.Listen(port)
+net.Listen("tcp", port)
+
+2. who initiate connection? - client
+Dial(server)
+
+3. connection established, so now what? 
+    a. who will send data? b. who will recieve data
+
+    read() and write()
+
+4. how multiple clients communicate? -  concurrency
+
+
+
+net.Listen()
+listener.Accept()
+
+net.Dial()
+
+conn.Read()
+conn.Write()
+
+conn.Close()
+
+
+Goal:
+Build chat server
+
+Server:
+- Listen
+- Accept
+- Store clients
+- Broadcast
+
+Client:
+- Dial
+- Read stdin
+- Send message
+- Print incoming messages
