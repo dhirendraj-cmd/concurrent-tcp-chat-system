@@ -21,13 +21,19 @@ func main(){
 
 	fmt.Println("Conneted on: ", conn.RemoteAddr())
 
+	serverInput := bufio.NewReader(conn)
 	for {
+		// read from server
+		serverMsg, err := serverInput.ReadString('\n')
+		if err != nil{
+			fmt.Println("Error while reading msg from server: ", err)
+			return
+		}
+	
+		fmt.Println(strings.TrimSpace(serverMsg))
 
 		fmt.Print("Client >: ")
-	
-	
 		// start writing to server
-	
 		// first take input from terminal
 		stdInput := bufio.NewReader(os.Stdin)
 	
@@ -45,15 +51,6 @@ func main(){
 			return
 		}
 	
-		// read from server
-		serverInput := bufio.NewReader(conn)
-		serverMsg, err := serverInput.ReadString('\n')
-		if err != nil{
-			fmt.Println("Error while reading msg from server: ", err)
-			return
-		}
-	
-		fmt.Println("Received msg from Server: ", strings.TrimSpace(serverMsg))
 	}
 
 
