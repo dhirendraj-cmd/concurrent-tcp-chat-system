@@ -19,10 +19,9 @@ type ConnectedClients struct{
 
 var (
 	activeClients = make(map[int]*ConnectedClients)
-	clientsMu sync.Mutex
+	clientsMu sync.RWMutex
 	idCounter = 1
 )
-
 
 func main(){
 
@@ -45,9 +44,9 @@ func main(){
 
 }
 
-
 func dealWithClient(conn net.Conn){
-	client, err := handleConnectedClients(conn)
+	readMsg := bufio.NewReader(conn)
+	client, err := handleConnectedClients(conn, readMsg)
 
 	if err!=nil{
 		fmt.Println("Error while taking username: ", err)
@@ -65,7 +64,6 @@ func dealWithClient(conn net.Conn){
 		
 		}()
 		
-	readMsg := bufio.NewReader(conn)
 	
 	for {
 		newline, err := readMsg.ReadString('\n')
@@ -76,24 +74,30 @@ func dealWithClient(conn net.Conn){
 			return
 		}
 
-		fmt.Println("Message from client: ", strings.TrimSpace(newline)+"\n")
+		// fmt.Println("Message from client: ", strings.TrimSpace(newline)+"\n")
+		sentFromClients := client.Username + ": " + strings.TrimSpace(newline)
+		broadCast(sentFromClients, client.ID)
 	}
 
 }
 
 
-func handleConnectedClients(conn net.Conn) (*ConnectedClients, error) {
+func handleConnectedClients(conn net.Conn, readMsg *bufio.Reader) (*ConnectedClients, error) {
 
-	conn.Write([]byte("Welcome! Enter your username: \n"))
+	_, err := conn.Write([]byte("Welcome! Enter your username: \n"))
+
+	if err != nil {
+        conn.Close()
+        return nil, err
+    }
 	
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
+	username, err := readMsg.ReadString('\n')
 	if err!=nil{
 		conn.Close()
 		return nil, err
 	}
 
-	username := strings.TrimSpace(string(buf[:n]))
+	username = strings.TrimSpace(username)
 	if username == ""{
 		username = fmt.Sprintf("Guest%d\n: ", idCounter)
 	}
@@ -112,14 +116,36 @@ func handleConnectedClients(conn net.Conn) (*ConnectedClients, error) {
 	activeClients[clientID] = clientData
 	clientsMu.Unlock()
 
-	// for _, k := range activeClients{
-	// 	fmt.Printf("ID:%v, Name:%v", k.ID, k.Username)
-	// }
-
 	fmt.Printf("[+] %s has entered chat\n", username)
+	broadCast(fmt.Sprintf("[+] %s has entered chat\n", clientData.Username), clientData.ID)
 
 	return clientData, nil
 }
+
+
+func broadCast(msg string, senderId int){
+	clientsMu.RLock()
+	clientSnapShot := make([]*ConnectedClients, 0, len(activeClients))
+	for id, client := range activeClients{
+		if id!=senderId{
+			clientSnapShot = append(clientSnapShot, client)
+		}
+	}
+
+	// fmt.Println("SnapShot>>> ", clientSnapShot, msg)
+	clientsMu.RUnlock()
+
+	for _, client := range clientSnapShot{
+		_, err := client.Conn.Write([]byte(strings.TrimSpace(msg)+"\n"))
+		if err!=nil{
+			fmt.Printf("Failed to send broadcast to ID %d: %v\n", client.ID, err)
+			continue
+		}
+	}
+
+}
+
+
 
 
 

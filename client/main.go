@@ -19,38 +19,42 @@ func main(){
 		return
 	}
 
+	defer conn.Close()
 	fmt.Println("Conneted on: ", conn.RemoteAddr())
 
-	serverInput := bufio.NewReader(conn)
-	for {
-		// read from server
-		serverMsg, err := serverInput.ReadString('\n')
-		if err != nil{
-			fmt.Println("Error while reading msg from server: ", err)
-			return
+	go func ()  {
+		serverInput := bufio.NewReader(conn)
+		for {
+			// read from server
+			fmt.Print("> ")
+			serverMsg, err := serverInput.ReadString('\n')
+			if err != nil{
+				fmt.Println("Error while reading msg from server: ", err)
+				return
+			}
+		
+			fmt.Println(strings.TrimSpace(serverMsg))
+		
 		}
-	
-		fmt.Println(strings.TrimSpace(serverMsg))
+	}()
 
-		fmt.Print("Client >: ")
-		// start writing to server
-		// first take input from terminal
-		stdInput := bufio.NewReader(os.Stdin)
-	
+	// start writing to server
+	stdInput := bufio.NewReader(os.Stdin)
+	for {
+		
 		// try to read one line at a time
 		writeToServer, err := stdInput.ReadString('\n')
 		if err!=nil{
-			fmt.Println("Error while reading lines from terminal....")
+			fmt.Println("Error while reading lines from terminal....", err)
 			return
 		}
-	
+
 		// send data to server by writing
 		_, err = conn.Write([]byte(strings.TrimSpace(writeToServer)+"\n"))
 		if err != nil{
 			fmt.Println("Error while writing to server... ", err)
 			return
 		}
-	
 	}
 
 
